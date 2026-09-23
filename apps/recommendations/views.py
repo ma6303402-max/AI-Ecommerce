@@ -50,176 +50,126 @@ import json
 from django.views.decorators.csrf import csrf_exempt
 from apps.cart.cart import get_or_create_cart
 from django.db.models import Q
+from django.conf import settings
 
 @csrf_exempt
 def ai_chat_recommendations_api(request):
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            user_msg = data.get('message', '').strip().lower()
-        except Exception:
-            user_msg = request.POST.get('message', '').strip().lower()
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Invalid request method'}, status=400)
 
-        engine = RecommendationEngine()
-        cart = get_or_create_cart(request)
-        cart_items = cart.items.select_related('product').all()
+    try:
+        data = json.loads(request.body)
+        user_msg = data.get('message', '').strip()
+    except Exception:
+        user_msg = request.POST.get('message', '').strip()
 
-        products_data = []
+    if not user_msg:
+        return JsonResponse({'reply': 'Please type a question!', 'products': []})
 
-        # Intent 1: Headphones / Audio / Music
-        if any(w in user_msg for w in ['headphone', 'audio', 'sound', 'music', 'earphone', 'speaker', 'listen', 'samma3a']):
-            headphones = Product.objects.filter(Q(title__icontains='headphones') | Q(tags__icontains='audio')).first()
-            smartwatch = Product.objects.filter(Q(title__icontains='watch') | Q(tags__icontains='watch')).first()
+    # ── Build product catalogue context from DB ──────────────────────────────
+    all_products = list(Product.objects.select_related('category').all())
+    product_lines = []
+    for p in all_products:
+        product_lines.append(
+            f"ID:{p.id} | {p.title} | Category:{p.category.name} | "
+            f"Price:${p.price} | Tags:{p.tags}"
+        )
+    products_context = "\n".join(product_lines)
 
-            reply = (
-                "Here are smart audio & wearable recommendations for you: 🎧 <strong>Pulse ANC Spatial Headphones</strong> for audiophile acoustic playback.<br>"
-                "💡 <strong>Pro-Tip Recommendation:</strong> Pair it with the ⌚ <strong>Zenith Pro Smartwatch</strong> so you can easily skip tracks, adjust volume, and control music playback directly from your wrist while on the go!"
-            )
+    # ── Cart context ──────────────────────────────────────────────────────────
+    cart = get_or_create_cart(request)
+    cart_items = cart.items.select_related('product').all()
+    cart_summary = ""
+    if cart_items.exists():
+        cart_summary = "User's current cart: " + ", ".join(
+            [f"{ci.product.title} (x{ci.quantity})" for ci in cart_items]
+        )
+    else:
+        cart_summary = "User's cart is currently empty."
 
-            for p, exp in [(headphones, "Top acoustic clarity & adaptive active noise cancellation"), (smartwatch, "Pairs logically: Control headphone track playback directly from your wrist!")]:
-                if p:
-                    products_data.append({
-                        'id': p.id,
-                        'title': p.title,
-                        'price': str(p.price),
-                        'image_url': p.image_url,
-                        'url': f"/product/{p.slug}/",
-                        'explanation': exp
-                    })
+    # ── Gemini prompt ─────────────────────────────────────────────────────────
+    system_prompt = f"""You are an intelligent AI shopping assistant for an e-commerce store.
+Your job is to help customers find the right products and answer any shopping question.
 
-        # Intent 2: Laptop / Computing / Workstation / Display
-        elif any(w in user_msg for w in ['laptop', 'computer', 'workstation', 'screen', 'monitor', 'display', 'developer', 'code', 'render']):
-            laptop = Product.objects.filter(Q(title__icontains='laptop') | Q(tags__icontains='laptop')).first()
-            monitor = Product.objects.filter(Q(title__icontains='monitor') | Q(tags__icontains='monitor')).first()
+PRODUCT CATALOGUE (use ONLY these products):
+{products_context}
 
-            reply = (
-                "Here is the ultimate developer & workstation recommendation: 💻 <strong>Hyperion X1 Neural Laptop</strong> with 45 TOPS NPU acceleration.<br>"
-                "💡 <strong>Pro-Tip Recommendation:</strong> Connect it with the 🖥️ <strong>Vortex Curved 4K AI Display</strong> for dual-screen productivity, 3D rendering, and color-accurate video editing!"
-            )
+{cart_summary}
 
-            for p, exp in [(laptop, "45 TOPS NPU neural processing for developer models"), (monitor, "Pairs logically: Dual-screen productivity & 4K color studio setup")]:
-                if p:
-                    products_data.append({
-                        'id': p.id,
-                        'title': p.title,
-                        'price': str(p.price),
-                        'image_url': p.image_url,
-                        'url': f"/product/{p.slug}/",
-                        'explanation': exp
-                    })
+RULES:
+1. Always respond in the SAME LANGUAGE the user writes in (Arabic → Arabic, English → English).
+2. Pick 1-3 most relevant product IDs from the catalogue based on the user's question.
+3. If asked for "cheapest" or "lowest price", pick the product(s) with the lowest price.
+4. If asked for "best" or "top rated", pick the most popular/feature-rich products.
+5. If asked a general question (shipping, returns, etc.) answer helpfully without products.
+6. Keep your reply short, friendly and helpful (2-3 sentences max).
 
-        # Intent 3: Smart Home / Security / Camera / Climate
-        elif any(w in user_msg for w in ['home', 'camera', 'security', 'thermostat', 'climate', 'house', 'smart home']):
-            camera = Product.objects.filter(Q(title__icontains='camera') | Q(tags__icontains='camera')).first()
-            thermostat = Product.objects.filter(Q(title__icontains='climate') | Q(tags__icontains='climate')).first()
+RESPOND IN THIS EXACT JSON FORMAT (no markdown, no code block):
+{{"reply": "your friendly response here", "product_ids": [1, 2, 3]}}
 
-            reply = (
-                "Here are intelligent smart home ecosystem recommendations: 🏠 <strong>Sentinel 4K Security Camera Hub</strong> for edge AI facial recognition.<br>"
-                "💡 <strong>Ecosystem Bundle:</strong> Add the 🌡️ <strong>OmniSmart AI Climate Controller</strong> to automatically reduce home energy consumption by up to 35%!"
-            )
+If no products are relevant, use: {{"reply": "your answer", "product_ids": []}}
+"""
 
-            for p, exp in [(camera, "Local edge AI facial recognition & 4K infrared security"), (thermostat, "Pairs logically: Learns room usage patterns & saves 35% energy")]:
-                if p:
-                    products_data.append({
-                        'id': p.id,
-                        'title': p.title,
-                        'price': str(p.price),
-                        'image_url': p.image_url,
-                        'url': f"/product/{p.slug}/",
-                        'explanation': exp
-                    })
+    try:
+        import google.generativeai as genai
+        genai.configure(api_key=settings.GEMINI_API_KEY)
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        response = model.generate_content(
+            f"{system_prompt}\n\nUser question: {user_msg}"
+        )
 
-        # Intent 4: Watch / Fitness / Wearable
-        elif any(w in user_msg for w in ['watch', 'fitness', 'health', 'sleep', 'wearable']):
-            smartwatch = Product.objects.filter(Q(title__icontains='watch') | Q(tags__icontains='watch')).first()
-            headphones = Product.objects.filter(Q(title__icontains='headphones') | Q(tags__icontains='headphones')).first()
+        raw = response.text.strip()
+        # Strip markdown code fences if Gemini wraps in ```json ... ```
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+        raw = raw.strip()
 
-            reply = (
-                "Here is your wearable fitness recommendation: ⌚ <strong>Zenith Pro Smartwatch</strong> with continuous ECG & AI sleep coaching.<br>"
-                "💡 <strong>Workout Pair Suggestion:</strong> Combine with 🎧 <strong>Pulse ANC Headphones</strong> for wireless workout sound and wrist playback control!"
-            )
+        parsed = json.loads(raw)
+        reply = parsed.get('reply', 'Here are some recommendations for you!')
+        product_ids = parsed.get('product_ids', [])
 
-            for p, exp in [(smartwatch, "Titanium smartwatch with ECG & 14-day battery life"), (headphones, "Pairs logically: Workout audio controlled right from your smartwatch!")]:
-                if p:
-                    products_data.append({
-                        'id': p.id,
-                        'title': p.title,
-                        'price': str(p.price),
-                        'image_url': p.image_url,
-                        'url': f"/product/{p.slug}/",
-                        'explanation': exp
-                    })
+    except Exception as e:
+        # Fallback: keyword matching if Gemini fails
+        msg_lower = user_msg.lower()
+        reply = "Here are some products that might interest you:"
+        product_ids = []
 
-        # Intent 5: Cart Complements Query
-        elif 'cart' in user_msg or 'my cart' in user_msg or 'buy' in user_msg:
-            if cart_items.exists():
-                recs = engine.get_personalized_recommendations(request, limit=3)
-                reply = f"I analyzed your cart ({cart.get_total_items()} items). Here are smart complements recommended for your current setup:"
-                for item in recs:
-                    p = item['product']
-                    products_data.append({
-                        'id': p.id,
-                        'title': p.title,
-                        'price': str(p.price),
-                        'image_url': p.image_url,
-                        'url': f"/product/{p.slug}/",
-                        'explanation': item['explanation']
-                    })
-            else:
-                trending = engine.get_trending_products(limit=3)
-                reply = "Your cart is currently empty! Here are top trending AI products to get you started:"
-                for item in trending:
-                    p = item['product']
-                    products_data.append({
-                        'id': p.id,
-                        'title': p.title,
-                        'price': str(p.price),
-                        'image_url': p.image_url,
-                        'url': f"/product/{p.slug}/",
-                        'explanation': item['explanation']
-                    })
-
-        # Intent 6: Trending / Popular / Budget
-        elif 'trend' in user_msg or 'popular' in user_msg or 'best' in user_msg or 'top' in user_msg:
-            trending = engine.get_trending_products(limit=3)
-            reply = "Here are the top trending & community favorite tech items right now:"
-            for item in trending:
-                p = item['product']
-                products_data.append({
-                    'id': p.id,
-                    'title': p.title,
-                    'price': str(p.price),
-                    'image_url': p.image_url,
-                    'url': f"/product/{p.slug}/",
-                    'explanation': item['explanation']
-                })
-
-        # Fallback Intent: Keyword / TF-IDF Matching
+        if any(w in msg_lower for w in ['cheap', 'lowest', 'budget', 'affordable', 'inexpensive', 'less expensive']):
+            cheapest = Product.objects.order_by('price')[:3]
+            product_ids = [p.id for p in cheapest]
+            reply = "Here are our most affordable products sorted by lowest price! 💰"
+        elif any(w in msg_lower for w in ['headphone', 'audio', 'music', 'earphone']):
+            prods = Product.objects.filter(Q(title__icontains='headphone') | Q(tags__icontains='audio'))[:2]
+            product_ids = [p.id for p in prods]
+        elif any(w in msg_lower for w in ['laptop', 'computer', 'developer']):
+            prods = Product.objects.filter(Q(title__icontains='laptop') | Q(tags__icontains='laptop'))[:2]
+            product_ids = [p.id for p in prods]
+        elif any(w in msg_lower for w in ['watch', 'fitness', 'health']):
+            prods = Product.objects.filter(Q(title__icontains='watch') | Q(tags__icontains='watch'))[:2]
+            product_ids = [p.id for p in prods]
         else:
-            matching_products = Product.objects.all()
-            if user_msg:
-                matching_products = matching_products.filter(
-                    Q(title__icontains=user_msg) | Q(description__icontains=user_msg) | Q(tags__icontains=user_msg)
-                )
-            if not matching_products.exists():
-                matching_products = Product.objects.all()
+            engine = RecommendationEngine()
+            trending = engine.get_trending_products(limit=3)
+            product_ids = [item['product'].id for item in trending]
 
-            matched = list(matching_products[:3])
-            reply = "Here are recommended AI tech products matching your request:"
-            for p in matched:
-                explanation = f"Top-rated match in {p.category.name} featuring neural performance."
+    # ── Fetch selected products and build response ────────────────────────────
+    products_data = []
+    if product_ids:
+        # Preserve order returned by Gemini
+        id_to_product = {p.id: p for p in Product.objects.filter(id__in=product_ids).select_related('category')}
+        for pid in product_ids:
+            p = id_to_product.get(pid)
+            if p:
                 products_data.append({
                     'id': p.id,
                     'title': p.title,
                     'price': str(p.price),
                     'image_url': p.image_url,
                     'url': f"/product/{p.slug}/",
-                    'explanation': explanation
+                    'explanation': f"{p.category.name} • ${p.price}",
                 })
 
-        return JsonResponse({
-            'reply': reply,
-            'products': products_data
-        })
+    return JsonResponse({'reply': reply, 'products': products_data})
 
-    return JsonResponse({'error': 'Invalid request method'}, status=400)

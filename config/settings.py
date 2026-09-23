@@ -5,6 +5,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-ai-ecommerce-system-super-secret-key-2026')
 
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', 'AIzaSyAQ.Ab8RN6JW3rMgihsG1-7RDCpqxn5CVA0mEC6DZPY1Hdg0VsZkkg')
+
 DEBUG = True
 
 ALLOWED_HOSTS = ['*']
