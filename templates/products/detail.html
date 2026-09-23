@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ product.title }} | NEXUS AI E-Commerce{% endblock %}
+
+{% block content %}
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 3rem; margin-top: 2rem;">
+  
+  <!-- Product Main Image -->
+  <div style="background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: var(--radius-lg); overflow: hidden; padding: 1rem;">
+    <img src="{{ product.image_url }}" alt="{{ product.title }}" style="width: 100%; height: 420px; object-fit: cover; border-radius: var(--radius-md);">
+  </div>
+
+  <!-- Product Info & Actions -->
+  <div>
+    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
+      <span class="product-category" style="margin: 0;">{{ product.category.name }}</span>
+      {% if product.stock > 0 %}
+        <span style="font-size: 0.8rem; background: rgba(16, 185, 129, 0.15); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.3); padding: 2px 8px; border-radius: 99px; font-weight: 600;">In Stock ({{ product.stock }})</span>
+      {% else %}
+        <span style="font-size: 0.8rem; background: rgba(239, 68, 68, 0.15); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.3); padding: 2px 8px; border-radius: 99px; font-weight: 600;">Out of Stock</span>
+      {% endif %}
+    </div>
+
+    <h1 style="font-size: 2.2rem; margin-bottom: 1rem;">{{ product.title }}</h1>
+    
+    <div style="font-family: var(--font-primary); font-size: 2rem; font-weight: 800; color: #fff; margin-bottom: 1.5rem;">
+      ${{ product.price }}
+    </div>
+
+    <p style="color: var(--text-muted); font-size: 1.05rem; line-height: 1.7; margin-bottom: 2rem;">
+      {{ product.description }}
+    </p>
+
+    <!-- Product Tags -->
+    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 2rem;">
+      {% for tag in product.tags.split %}
+        <span style="font-size: 0.8rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); padding: 4px 10px; border-radius: 99px; color: var(--text-muted);">#{{ tag }}</span>
+      {% endfor %}
+    </div>
+
+    <!-- Purchase Form -->
+    <form action="{% url 'cart:add_to_cart' product_id=product.id %}" method="post" class="ajax-add-to-cart" style="display: flex; gap: 1rem; align-items: center;">
+      {% csrf_token %}
+      <div style="width: 100px;">
+        <input type="number" name="quantity" value="1" min="1" max="{{ product.stock }}" class="form-input" style="text-align: center; font-size: 1.1rem;">
+      </div>
+      <button type="submit" class="btn btn-primary" style="flex: 1; padding: 0.9rem;" {% if product.stock == 0 %}disabled{% endif %}>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+        </svg>
+        Add to Shopping Cart
+      </button>
+    </form>
+
+  </div>
+</div>
+
+<!-- AI Recommendation Engine Section -->
+<section style="margin-top: 5rem;">
+  <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-glass); padding-bottom: 1rem; margin-bottom: 2rem;">
+    <div>
+      <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.3rem;">
+        <span class="badge-ai">🤖 AI Recommendation Assistant</span>
+      </div>
+      <h2 style="font-size: 1.75rem;">Customers Who Viewed This Also Explored</h2>
+    </div>
+  </div>
+
+  {% if similar_recommendations %}
+    <div class="grid-products">
+      {% for item in similar_recommendations %}
+        <div class="product-card">
+          <div class="product-image-wrap">
+            <img src="{{ item.product.image_url }}" alt="{{ item.product.title }}">
+            <span class="badge-ai" style="position: absolute; top: 12px; right: 12px;">{{ item.similarity_score|floatformat:2 }} Match</span>
+          </div>
+          <div class="product-info">
+            <a href="{% url 'products:detail' slug=item.product.slug %}" class="product-title">{{ item.product.title }}</a>
+            
+            <div class="ai-explanation-box" style="margin: 0.75rem 0;">
+              <svg viewBox="0 0 24 24">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+              </svg>
+              <div class="ai-explanation-text">{{ item.explanation }}</div>
+            </div>
+
+            <div class="product-bottom">
+              <div class="product-price">${{ item.product.price }}</div>
+              <a href="{% url 'products:detail' slug=item.product.slug %}" class="btn btn-secondary btn-sm">View Item</a>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+</section>
+
+{% endblock %}

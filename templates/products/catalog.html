@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+
+{% block title %}Explore Tech Catalog | NEXUS AI Store{% endblock %}
+
+{% block content %}
+<!-- Hero Header -->
+<section class="hero">
+  <div class="hero-badge">✨ AI-Powered Shopping Engine</div>
+  <h1 class="hero-title">Discover Next-Gen Intelligence & Tech</h1>
+  <p class="hero-subtitle">Explore curated hardware, autonomous devices, and audio equipment with real-time AI recommendations personalized for you.</p>
+</section>
+
+<!-- Category Filter Pills -->
+<div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: 2rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 1rem;">
+  <div style="display: flex; gap: 0.6rem; flex-wrap: wrap;">
+    <a href="{% url 'products:catalog' %}" class="btn btn-sm {% if not selected_category %}btn-primary{% else %}btn-secondary{% endif %}">All Products</a>
+    {% for cat in categories %}
+      <a href="?category={{ cat.slug }}" class="btn btn-sm {% if selected_category == cat.slug %}btn-primary{% else %}btn-secondary{% endif %}">{{ cat.name }}</a>
+    {% endfor %}
+  </div>
+
+  <!-- Sort Dropdown -->
+  <form method="get" style="display: flex; align-items: center; gap: 0.5rem;">
+    {% if selected_category %}<input type="hidden" name="category" value="{{ selected_category }}">{% endif %}
+    {% if search_query %}<input type="hidden" name="q" value="{{ search_query }}">{% endif %}
+    <label style="font-size: 0.85rem; color: var(--text-muted);">Sort By:</label>
+    <select name="sort" onchange="this.form.submit()" class="form-input" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; width: auto;">
+      <option value="-created_at">Newest First</option>
+      <option value="price">Price: Low to High</option>
+      <option value="-price">Price: High to Low</option>
+      <option value="-view_count">Most Popular</option>
+    </select>
+  </form>
+</div>
+
+<!-- Product Grid -->
+{% if page_obj %}
+  <div class="grid-products">
+    {% for product in page_obj %}
+      <div class="product-card">
+        <div class="product-image-wrap">
+          <img src="{{ product.image_url }}" alt="{{ product.title }}" loading="lazy">
+          {% if product.is_featured %}
+            <span class="badge-featured">Featured</span>
+          {% endif %}
+        </div>
+
+        <div class="product-info">
+          <div class="product-category">{{ product.category.name }}</div>
+          <a href="{% url 'products:detail' slug=product.slug %}" class="product-title">{{ product.title }}</a>
+          <p class="product-desc">{{ product.description }}</p>
+
+          <div class="product-bottom">
+            <div class="product-price" style="font-size: 1.4rem; font-weight: 800; color: #ffffff;">${{ product.price }}</div>
+            <form action="{% url 'cart:add_to_cart' product_id=product.id %}" method="post" class="ajax-add-to-cart">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-primary btn-sm">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 5v14M5 12h14"/>
+                </svg>
+                Add
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+  <!-- Pagination -->
+  {% if page_obj.has_other_pages %}
+    <div style="display: flex; justify-content: center; gap: 0.5rem; margin-top: 3rem;">
+      {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}{% if selected_category %}&category={{ selected_category }}{% endif %}" class="btn btn-secondary btn-sm">Previous</a>
+      {% endif %}
+
+      <span style="display: flex; align-items: center; padding: 0 1rem; color: var(--text-muted); font-size: 0.9rem;">
+        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+      </span>
+
+      {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}{% if selected_category %}&category={{ selected_category }}{% endif %}" class="btn btn-secondary btn-sm">Next</a>
+      {% endif %}
+    </div>
+  {% endif %}
+{% else %}
+  <div style="text-align: center; padding: 4rem 1rem; background: var(--bg-card); border-radius: var(--radius-lg); border: 1px solid var(--border-glass);">
+    <h3>No Products Found</h3>
+    <p style="color: var(--text-muted); margin-top: 0.5rem;">Try adjusting your filter or search terms.</p>
+  </div>
+{% endif %}
+
+<!-- AI Trending Section -->
+{% if trending_products %}
+<section style="margin-top: 4rem;">
+  <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem;">
+    <span class="badge-ai">🤖 AI Trending</span>
+    <h2>Popular Demand Right Now</h2>
+  </div>
+
+  <div class="grid-products">
+    {% for item in trending_products %}
+      <div class="product-card">
+        <div class="product-image-wrap">
+          <img src="{{ item.product.image_url }}" alt="{{ item.product.title }}">
+        </div>
+        <div class="product-info">
+          <a href="{% url 'products:detail' slug=item.product.slug %}" class="product-title">{{ item.product.title }}</a>
+          <div style="font-size: 0.8rem; color: #06b6d4; margin-top: 0.4rem;">{{ item.explanation }}</div>
+          <div class="product-bottom" style="margin-top: 1rem;">
+            <div class="product-price">${{ item.product.price }}</div>
+            <a href="{% url 'products:detail' slug=item.product.slug %}" class="btn btn-secondary btn-sm">View Details</a>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,131 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}AI-Powered E-Commerce Platform{% endblock %}</title>
+  <meta name="description" content="Next-Generation E-Commerce Store with AI Recommendations">
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+</head>
+<body>
+
+  <!-- Navigation Bar -->
+  <nav class="navbar">
+    <div class="container nav-container">
+      <a href="{% url 'products:catalog' %}" class="brand-logo">
+        <svg width="28" height="28" viewBox="0 0 24 24">
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+        </svg>
+        <span>NEXUS AI</span>
+      </a>
+
+      <!-- Live Search Bar -->
+      <div class="nav-search">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input type="text" id="nav-search-input" class="search-input" placeholder="Search products, AI tags, tech..." autocomplete="off">
+        <div id="search-results-dropdown" class="search-results-dropdown"></div>
+      </div>
+
+      <!-- Action Links -->
+      <div class="nav-actions">
+        <a href="{% url 'products:catalog' %}" class="nav-link">Catalog</a>
+
+        {% if user.is_authenticated %}
+          {% if user.is_administrator or user.is_staff %}
+            <a href="{% url 'admin_dashboard:overview' %}" class="nav-link" style="color: #6366f1; font-weight: 600;">⚡ Admin Panel</a>
+          {% else %}
+            <a href="{% url 'orders:history' %}" class="nav-link">My Orders</a>
+          {% endif %}
+          <a href="{% url 'auth:logout' %}" class="nav-link">Logout ({{ user.username }})</a>
+        {% else %}
+          <a href="{% url 'auth:login' %}" class="nav-link">Login</a>
+          <a href="{% url 'auth:register' %}" class="btn btn-primary btn-sm">Sign Up</a>
+        {% endif %}
+
+        <!-- Cart Button -->
+        <a href="{% url 'cart:view_cart' %}" class="btn-cart">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <path d="M16 10a4 4 0 0 1-8 0"></path>
+          </svg>
+          <span>Cart</span>
+          <span id="nav-cart-count" class="cart-count">{{ cart_total_items }}</span>
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Flash Messages -->
+  <div class="container" style="margin-top: 1.5rem;">
+    {% if messages %}
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">
+          <span>{{ message }}</span>
+        </div>
+      {% endfor %}
+    {% endif %}
+  </div>
+
+  <!-- Main Content Block -->
+  <main class="container" style="padding-bottom: 3rem;">
+    {% block content %}
+    {% endblock %}
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container">
+      <p>© 2026 NEXUS AI E-Commerce System • Powered by Python & Django</p>
+    </div>
+  </footer>
+
+  <!-- Floating AI Assistant Chatbot Widget -->
+  <div id="ai-chat-widget" class="ai-chat-widget">
+    <button id="ai-chat-toggle" class="ai-chat-toggle" title="AI Shopping Assistant">
+      <span class="ai-chat-badge">AI</span>
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+      </svg>
+    </button>
+
+    <div id="ai-chat-window" class="ai-chat-window">
+      <div class="ai-chat-header">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <span class="badge-ai">🤖 Nexus AI</span>
+          <span style="font-weight: 700; font-size: 0.95rem;">Shopping Assistant</span>
+        </div>
+        <button id="ai-chat-close" class="ai-chat-close">&times;</button>
+      </div>
+
+      <div id="ai-chat-body" class="ai-chat-body">
+        <div class="chat-msg bot">
+          Hello! I'm your Nexus AI Assistant 🤖.<br>
+          Would you like me to recommend products tailored for you?
+        </div>
+
+        <div id="chat-chips-area" class="chat-chips">
+          <button class="chat-chip" onclick="sendChatQuery('Recommend items based on my Cart')">🛒 Cart Complements</button>
+          <button class="chat-chip" onclick="sendChatQuery('Show Trending Products')">🔥 Top Trending</button>
+          <button class="chat-chip" onclick="sendChatQuery('Recommend headphones with noise cancellation for workouts')">🎧 Workout & Audio Gear</button>
+          <button class="chat-chip" onclick="sendChatQuery('What is the best laptop setup for programming?')">💻 Developer Workstation</button>
+          <button class="chat-chip" onclick="sendChatQuery('Recommend smart home security cameras and climate controllers')">🏠 Smart Home Ecosystem</button>
+          <button class="chat-chip" onclick="sendChatQuery('Show budget tech under $300')">💡 Gadgets under $300</button>
+        </div>
+      </div>
+
+      <form id="ai-chat-form" class="ai-chat-input-area">
+        <input type="text" id="ai-chat-input" class="ai-chat-input" placeholder="Ask AI for recommendations..." autocomplete="off">
+        <button type="submit" class="btn btn-primary btn-sm" style="border-radius: var(--radius-full); padding: 0.5rem 1rem;">Send</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="{% static 'js/app.js' %}"></script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

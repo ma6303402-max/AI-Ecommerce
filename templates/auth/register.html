@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+
+{% block title %}Create Account | NEXUS AI E-Commerce{% endblock %}
+
+{% block content %}
+<div class="auth-box">
+  <h2 style="text-align: center; margin-bottom: 0.5rem;">Join NEXUS AI</h2>
+  <p style="text-align: center; color: var(--text-muted); margin-bottom: 2rem; font-size: 0.9rem;">Register to unlock intelligent shopping assistant features</p>
+
+  <form method="post">
+    {% csrf_token %}
+    {% for field in form %}
+      <div class="form-group">
+        <label class="form-label">{{ field.label }}</label>
+        {{ field }}
+        {% if field.errors %}
+          <div style="color: #fca5a5; font-size: 0.8rem; margin-top: 0.2rem;">{{ field.errors.0 }}</div>
+        {% endif %}
+      </div>
+    {% endfor %}
+
+    <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">Create Account</button>
+  </form>
+
+  <div style="text-align: center; margin-top: 1.5rem; font-size: 0.9rem; color: var(--text-muted);">
+    Already have an account? <a href="{% url 'auth:login' %}" style="color: #818cf8; font-weight: 600;">Sign In</a>
+  </div>
+</div>
+{% endblock %}

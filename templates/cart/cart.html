@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+
+{% block title %}Shopping Cart | NEXUS AI E-Commerce{% endblock %}
+
+{% block content %}
+<h1 style="margin-top: 2rem; margin-bottom: 2rem;">Your Shopping Cart</h1>
+
+{% if cart_items %}
+  <div style="display: grid; grid-template-columns: 1fr 340px; gap: 2rem; align-items: start;">
+    
+    <!-- Cart Items Table -->
+    <div style="background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: var(--radius-lg); padding: 1.5rem;">
+      <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+          <tr style="border-bottom: 1px solid var(--border-glass); text-align: left; color: var(--text-muted); font-size: 0.85rem; text-transform: uppercase;">
+            <th style="padding-bottom: 1rem;">Product</th>
+            <th style="padding-bottom: 1rem;">Price</th>
+            <th style="padding-bottom: 1rem;">Quantity</th>
+            <th style="padding-bottom: 1rem;">Total</th>
+            <th style="padding-bottom: 1rem; text-align: right;">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in cart_items %}
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+              <td style="padding: 1.25rem 0;">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                  <img src="{{ item.product.image_url }}" alt="{{ item.product.title }}" style="width: 60px; height: 60px; object-fit: cover; border-radius: var(--radius-md);">
+                  <div>
+                    <a href="{% url 'products:detail' slug=item.product.slug %}" style="font-weight: 600; color: #fff;">{{ item.product.title }}</a>
+                    <div style="font-size: 0.8rem; color: var(--text-muted);">Category: {{ item.product.category.name }}</div>
+                  </div>
+                </div>
+              </td>
+
+              <td style="font-weight: 600;">${{ item.product.price }}</td>
+
+              <td>
+                <form action="{% url 'cart:update_cart_item' item_id=item.id %}" method="post" style="display: flex; align-items: center; gap: 0.5rem;">
+                  {% csrf_token %}
+                  <input type="number" name="quantity" value="{{ item.quantity }}" min="1" max="{{ item.product.stock }}" class="form-input" style="width: 70px; padding: 0.4rem; text-align: center;">
+                  <button type="submit" class="btn btn-secondary btn-sm">Update</button>
+                </form>
+              </td>
+
+              <td style="font-weight: 700; color: #6366f1;">${{ item.get_total_price }}</td>
+
+              <td style="text-align: right;">
+                <form action="{% url 'cart:remove_from_cart' item_id=item.id %}" method="post" style="display: inline;">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-secondary btn-sm" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.3);">Remove</button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Summary Box -->
+    <div style="background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: var(--radius-lg); padding: 1.5rem; position: sticky; top: 100px;">
+      <h3 style="margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 0.75rem;">Order Summary</h3>
+      
+      <div style="display: flex; justify-content: space-between; margin-bottom: 1rem; color: var(--text-muted);">
+        <span>Subtotal</span>
+        <span style="color: #fff; font-weight: 600;">${{ cart.get_total_price }}</span>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; margin-bottom: 1rem; color: var(--text-muted);">
+        <span>Shipping</span>
+        <span style="color: #10b981; font-weight: 600;">FREE</span>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border-glass); font-size: 1.2rem; font-weight: 800;">
+        <span>Total</span>
+        <span style="color: #6366f1;">${{ cart.get_total_price }}</span>
+      </div>
+
+      <a href="{% url 'orders:checkout' %}" class="btn btn-primary" style="width: 100%; margin-top: 1.5rem; padding: 0.9rem;">
+        Proceed to Checkout →
+      </a>
+    </div>
+  </div>
+
+  <!-- AI Personalized Cart Recommendations -->
+  {% if cart_recommendations %}
+    <section style="margin-top: 4rem;">
+      <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1.5rem;">
+        <span class="badge-ai">🤖 AI Smart Add-ons</span>
+        <h2>Frequently Added With Items In Your Cart</h2>
+      </div>
+
+      <div class="grid-products">
+        {% for item in cart_recommendations %}
+          <div class="product-card">
+            <div class="product-image-wrap">
+              <img src="{{ item.product.image_url }}" alt="{{ item.product.title }}">
+            </div>
+            <div class="product-info">
+              <a href="{% url 'products:detail' slug=item.product.slug %}" class="product-title">{{ item.product.title }}</a>
+              <div style="font-size: 0.82rem; color: #06b6d4; margin: 0.5rem 0;">{{ item.explanation }}</div>
+              <div class="product-bottom">
+                <div class="product-price">${{ item.product.price }}</div>
+                <form action="{% url 'cart:add_to_cart' product_id=item.product.id %}" method="post" class="ajax-add-to-cart">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-primary btn-sm">Add to Cart</button>
+                </form>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </section>
+  {% endif %}
+
+{% else %}
+  <div style="text-align: center; padding: 5rem 1rem; background: var(--bg-card); border-radius: var(--radius-lg); border: 1px solid var(--border-glass);">
+    <h2>Your Cart is Empty</h2>
+    <p style="color: var(--text-muted); margin: 1rem 0 2rem;">Explore our catalog to find smart devices and technology tailored for you.</p>
+    <a href="{% url 'products:catalog' %}" class="btn btn-primary">Browse Products</a>
+  </div>
+{% endif %}
+
+{% endblock %}

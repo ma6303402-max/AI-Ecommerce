@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+
+{% block title %}Order {{ order.get_order_number }} Details | NEXUS AI{% endblock %}
+
+{% block content %}
+<div style="margin-top: 2rem; margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between;">
+  <div>
+    <h1 style="font-size: 2rem;">Order {{ order.get_order_number }}</h1>
+    <p style="color: var(--text-muted); font-size: 0.9rem;">Placed on {{ order.created_at|date:"F d, Y at H:i" }}</p>
+  </div>
+
+  <div>
+    <span style="background: rgba(99, 102, 241, 0.15); color: #a5b4fc; border: 1px solid rgba(99, 102, 241, 0.4); padding: 6px 16px; border-radius: 99px; font-weight: 700; font-size: 0.95rem;">
+      Status: {{ order.get_status_display }}
+    </span>
+  </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 340px; gap: 2rem; align-items: start;">
+  
+  <!-- Line Items -->
+  <div style="background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: var(--radius-lg); padding: 1.5rem;">
+    <h3 style="margin-bottom: 1.25rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 0.75rem;">Purchased Items</h3>
+
+    <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+      {% for item in order.items.all %}
+        <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 1rem;">
+          <div style="display: flex; align-items: center; gap: 1rem;">
+            {% if item.product %}
+              <img src="{{ item.product.image_url }}" alt="{{ item.product_title }}" style="width: 55px; height: 55px; object-fit: cover; border-radius: var(--radius-sm);">
+            {% endif %}
+            <div>
+              <div style="font-weight: 600; color: #fff;">{{ item.product_title }}</div>
+              <div style="font-size: 0.85rem; color: var(--text-muted);">${{ item.price }} × {{ item.quantity }}</div>
+            </div>
+          </div>
+
+          <div style="font-weight: 700; font-size: 1.1rem; color: #6366f1;">${{ item.get_total_price }}</div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Shipping Address & Order Summary -->
+  <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+    <div style="background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: var(--radius-lg); padding: 1.5rem;">
+      <h4 style="margin-bottom: 1rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 0.5rem; color: var(--text-muted);">Shipping Address</h4>
+      <div style="font-weight: 600; color: #fff;">{{ order.full_name }}</div>
+      <div style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.25rem;">{{ order.email }}</div>
+      <div style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.5rem;">
+        {{ order.shipping_address }}<br>
+        {{ order.city }}, {{ order.postal_code }}<br>
+        {{ order.country }}
+      </div>
+    </div>
+
+    <div style="background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: var(--radius-lg); padding: 1.5rem;">
+      <h4 style="margin-bottom: 1rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 0.5rem; color: var(--text-muted);">Total Paid</h4>
+      <div style="font-family: var(--font-primary); font-size: 2rem; font-weight: 800; color: #6366f1;">
+        ${{ order.total_amount }}
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
