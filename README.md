@@ -71,6 +71,9 @@ A full-stack, modern AI-Powered E-Commerce Application built with **Python**, **
    ```
    Open `http://127.0.0.1:8000/` in your browser.
 
+5. **View Live Demo**:
+   You can explore the fully functional deployed application here:
+   👉 [https://smart-shop-murex.vercel.app/](https://smart-shop-murex.vercel.app/)
 ---
 
 ## 📂 Deliverables & Documentation
